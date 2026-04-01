@@ -525,7 +525,7 @@ WW.freezeVideoAtStart = function(videoEl, time, scopeRoot){  if (!videoEl) retur
   var logoShadow = config.logoShadow != null ? config.logoShadow : preset.logoShadow;
 
   var logoHref = WW.withOrg(config.logoHref || "/base-station", org);
-  var logoSrc = config.logoSrc || "/cgi/image/WWLogo_-IrZfgR1CvN9DRDc2uq8H.png?width=828&quality=80&format=auto";
+  var logoSrc = config.logoSrc || "https://winterword.cluehouse.co.nz/cgi/image/WWLogo_-IrZfgR1CvN9DRDc2uq8H.png?width=828&quality=80&format=auto";
   var logoAlt = config.logoAlt || "WinterWord";
 
   var html = [
