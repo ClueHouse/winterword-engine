@@ -1,13 +1,16 @@
 <script>
 (function () {
-  const params = new URLSearchParams(window.location.search);
-  const org = params.get("org");
+  const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
+  const reserved = new Set(["", "twenty26", "cgi"]);
 
-  if (!org) {
-    window.location.href = "/twenty26/base-station";
+  if (!path) {
     return;
   }
 
-  window.location.href = "/twenty26/base-station?org=" + encodeURIComponent(org);
+  if (reserved.has(path)) {
+    return;
+  }
+
+  window.location.href = "/twenty26/?org=" + encodeURIComponent(path);
 })();
 </script>
