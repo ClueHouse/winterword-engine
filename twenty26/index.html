@@ -20,6 +20,7 @@
 
 </head>
 <body>
+
 <script>
 (function () {
   const params = new URLSearchParams(window.location.search);
@@ -27,13 +28,8 @@
 
   if (!org) return;
 
-const params = new URLSearchParams(window.location.search);
-const org = params.get("org");
-window.history.replaceState({}, "", org ? "/" + org : "/");
+  window.history.replaceState({}, "", "/" + org);
 })();
-</script>
-<script>
-  window.history.replaceState({}, "", "/twenty26/base-station");
 </script>
 
 <script src="/public/js/winterword-engine-v1.js"></script>
