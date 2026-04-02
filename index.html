@@ -1,40 +1,13 @@
-<!-- force deploy -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WinterWord</title>
+<script>
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const org = params.get("org");
 
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #000;
-    }
+  if (!org) {
+    window.location.href = "/twenty26/base-station";
+    return;
+  }
 
-    .wrap {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-    }
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-  </style>
-</head>
-<body>
-  <script>
-    window.__WW_DISABLE__ = true;
-  </script>
-
-  <div class="wrap">
-    <img src="https://images.unsplash.com/photo-1517299321609-52687d1bc55a?auto=format&fit=crop&w=1600&q=80" alt="Snow" />
-  </div>
-</body>
-</html>
+  window.location.href = "/twenty26/base-station?org=" + encodeURIComponent(org);
+})();
+</script>
