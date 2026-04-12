@@ -1,16 +1,46 @@
-<script>
-(function () {
-  const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
-  const reserved = new Set(["", "twenty26", "cgi"]);
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>WinterWord</title>
+</head>
+<body>
+  <div id="app">Loading WinterWord…</div>
 
-  if (!path) {
-    return;
-  }
+  <script>
+    (async function () {
+      const slug = location.pathname.replace(/^\/+|\/+$/g, "");
 
-  if (reserved.has(path)) {
-    return;
-  }
+      if (!slug) {
+        document.getElementById("app").innerText = "";
+        return;
+      }
 
-  window.location.href = "/twenty26/?org=" + encodeURIComponent(path);
-})();
-</script>
+      try {
+        const res = await fetch("https://engine.cluehouse.co.nz/api/bootstrap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug })
+        });
+
+        if (!res.ok) {
+          document.getElementById("app").innerText = "Invalid organisation.";
+          return;
+        }
+
+        const boot = await res.json();
+
+        window.__BOOT__ = boot;
+
+        const script = document.createElement("script");
+        script.src = boot.entry;
+        script.type = "module";
+        document.head.appendChild(script);
+
+      } catch (e) {
+        document.getElementById("app").innerText = "Error loading game.";
+      }
+    })();
+  </script>
+</body>
+</html>
