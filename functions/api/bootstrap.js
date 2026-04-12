@@ -11,9 +11,21 @@ export async function onRequestPost(context) {
 
     const cleanSlug = String(slug).trim().toLowerCase();
 
-    const allowedSlugs = ["boprc", "testslug"];
+    const formula = `AND({slug}="${cleanSlug}", {is_visible}=TRUE())`;
 
-    if (!allowedSlugs.includes(cleanSlug)) {
+    const url =
+      `https://api.airtable.com/v0/${context.env.AIRTABLE_BASE_ID}/${encodeURIComponent(context.env.AIRTABLE_TABLE_NAME)}` +
+      `?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`;
+
+    const airtableRes = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${context.env.AIRTABLE_API_KEY}`
+      }
+    });
+
+    const airtableData = await airtableRes.json();
+
+    if (!airtableData.records || airtableData.records.length === 0) {
       return new Response(JSON.stringify({ ok: false, error: "Invalid slug" }), {
         status: 404,
         headers: { "Content-Type": "application/json" }
