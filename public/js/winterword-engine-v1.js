@@ -910,9 +910,9 @@ WW.init = function(root){
   if (typeof document === "undefined"){
     return;
   }
-  if (document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", start, { once:true });
-  } else {
-    start();
-  }
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", WW.init, { once:true });
+} else {
+    WW.init();
+}
 })();
