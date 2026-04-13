@@ -65,35 +65,15 @@ WW.registerScopedListener = function(scope, target, type, handler, options){
   }
   return remove;
 };
-WW.config = {  pathPrefix: "",  orgStateEndpoint: "https://winterword-assets.vercel.app/api/org-state",  leaderboardEndpoint: "https://winterword-assets.vercel.app/api/leaderboard"};WW.state = {  orgStateCache: Object.create(null),  leaderboardCache: Object.create(null),  mediaAudio: null,  answerAudio: Object.create(null),  railInstances: Object.create(null),  overlayControllers: Object.create(null),  appInstance: null,  root: null,  mountCleanup: typeof WeakMap === "function" ? new WeakMap() : null,  mountCleanupFallback: []};
+WW.config = {  pathPrefix: "",  orgStateEndpoint: "/api/org-state",  leaderboardEndpoint: "/api/leaderboard"};WW.state = {  orgStateCache: Object.create(null),  leaderboardCache: Object.create(null),  mediaAudio: null,  answerAudio: Object.create(null),  railInstances: Object.create(null),  overlayControllers: Object.create(null),  appInstance: null,  root: null,  mountCleanup: typeof WeakMap === "function" ? new WeakMap() : null,  mountCleanupFallback: []};
 WW.navigate = function(scope, href){
-  if (!href) return false;
-  var location = WW.getLocation(scope);
   var mount = WW.state && WW.state.appInstance ? WW.state.appInstance.mount : null;
-  try{
-    var baseHref = location && location.href ? location.href : (typeof window !== "undefined" && window.location ? window.location.href : "https://example.com/");
-    var url = new URL(String(href), baseHref);
-    if (/^(mailto:|tel:|javascript:)/i.test(url.href)) return false;
-    var pageName = WW.resolvePageName(url.pathname);
-    if (!pageName || !mount) return false;
-    WW.state.currentPageName = pageName;
-    WW.state.currentPagePath = url.pathname;
-    WW.mountPage(pageName, mount);
-    return true;
-  }catch(e){
-    return false;
-  }
-};
-WW.isCurrentLocation = function(scope, href){
-  if (!href) return false;
-  try{
-    var location = WW.getLocation(scope);
-    var baseHref = location && location.href ? location.href : (typeof window !== "undefined" && window.location ? window.location.href : "https://example.com/");
-    var url = new URL(String(href), baseHref);
-    return WW.state.currentPageName === WW.resolvePageName(url.pathname);
-  }catch(e){
-    return false;
-  }
+  var pageName = WW.routeToPageName(href);
+  if (!mount || !pageName) return false;
+  WW.state.currentPageName = pageName;
+  WW.state.currentPagePath = String(href || "").trim();
+  WW.mountPage(pageName, mount);
+  return true;
 };
 WW.createAbortSignalWithTimeout = function(timeoutMs){
   var timeout = typeof timeoutMs === "number" && timeoutMs > 0 ? timeoutMs : 12000;
@@ -177,7 +157,7 @@ WW.pruneRailInstances = function(){
       }
     }
   });
-};WW.pruneOverlayControllers = function(){  var store = WW.state.overlayControllers || {};  Object.keys(store).forEach(function(key){    var controller = store[key];    if (!controller || typeof controller.isAlive !== "function" || !controller.isAlive()){      delete store[key];    }  });};WW.registerOverlayController = function(key, controller){  if (!key || !controller) return;  WW.pruneOverlayControllers();  WW.state.overlayControllers[key] = controller;};WW.unregisterOverlayController = function(key){  if (!key || !WW.state.overlayControllers) return;  delete WW.state.overlayControllers[key];};WW.getFallbackMountCleanupRecord = function(mount, create){  var records = WW.state.mountCleanupFallback || [];  for (var i = 0; i < records.length; i += 1){    if (records[i] && records[i].mount === mount){      return records[i];    }  }  if (!create) return null;  var record = { mount: mount, cleanup: [] };  records.push(record);  WW.state.mountCleanupFallback = records;  return record;};WW.ensureMountCleanupStore = function(mount){  if (!mount) return [];  if (WW.state.mountCleanup){    var store = WW.state.mountCleanup.get(mount);    if (!store){      store = [];      WW.state.mountCleanup.set(mount, store);    }    return store;  }  return WW.getFallbackMountCleanupRecord(mount, true).cleanup;};WW.registerMountCleanup = function(mount, fn){  if (!mount || typeof fn !== "function") return;  WW.ensureMountCleanupStore(mount).push(fn);};WW.runMountCleanup = function(mount){  if (!mount) return;  if (WW && WW.state && WW.state.overlayControllers){    Object.keys(WW.state.overlayControllers).forEach(function(key){      var controller = WW.state.overlayControllers[key];      if (!controller) return;      var root = controller.scopeRoot || null;      if (root && root === mount && typeof controller.destroy === "function"){        try{ controller.destroy(); }catch(e){}      }    });  }  var cleanupFns = null;  if (WW.state.mountCleanup){    cleanupFns = WW.state.mountCleanup.get(mount);  } else {    var record = WW.getFallbackMountCleanupRecord(mount, false);    cleanupFns = record ? record.cleanup : null;  }  if (!cleanupFns) return;  while (cleanupFns.length){    var fn = cleanupFns.pop();    try{ fn(); }catch(e){}  }  if (WW.state.mountCleanup){    WW.state.mountCleanup.delete(mount);  } else {    WW.state.mountCleanupFallback = (WW.state.mountCleanupFallback || []).filter(function(record){      return !!record && record.mount !== mount;    });  }};WW.escapeHtml = function(value){  return String(value == null ? "" : value)    .replace(/&/g, "&amp;")    .replace(/</g, "&lt;")    .replace(/>/g, "&gt;")    .replace(/"/g, "&quot;");};WW.getOrgFromUrl = function(scope){  try{    if (typeof window !== "undefined" && window.__WINTERWORD_BOOT__ && window.__WINTERWORD_BOOT__.slug){      return String(window.__WINTERWORD_BOOT__.slug).trim();    }    var location = WW.getLocation(scope);    var path = location && typeof location.pathname === "string" ? location.pathname : "";    return String(path).replace(/^\/+|\/+$/g, "").split("/")[0] || "";  }catch(e){    return "";  }};WW.prefixInternalPath = function(path){  if (!path) return path;  var value = String(path).trim();  if (!value) return value;  if (    value.indexOf("/cgi/") === 0 ||    value.indexOf("mailto:") === 0 ||    value.indexOf("tel:") === 0 ||    value.indexOf("#") === 0 ||    value.indexOf("http://") === 0 ||    value.indexOf("https://") === 0 ||    value.indexOf(WW.config.pathPrefix + "/") === 0 ||    value === WW.config.pathPrefix  ){    return value;  }  if (value.charAt(0) !== "/"){    return value;  }  return WW.config.pathPrefix + value;};WW.withOrg = function(path, org){  var href = WW.prefixInternalPath(path);  if (!href) return href;  if (href.indexOf("mailto:") === 0 || href.indexOf("tel:") === 0 || href.indexOf("#") === 0) return href;  return href;};WW.prefixInternalPathsInNode = function(root){  if (!root) return;  var attrNames = ["href","data-path","action"];  var nodes = root.querySelectorAll("[href],[data-path],[action]");  Array.prototype.forEach.call(nodes, function(node){    attrNames.forEach(function(attr){      var val = node.getAttribute(attr);      if (!val) return;      node.setAttribute(attr, WW.prefixInternalPath(val));    });  });};WW.stopRendering = function(node){  if (node) node.style.display = "none";};WW.showUnavailableBlock = function(viewEl, pageTitle){  if (!viewEl) return;  viewEl.innerHTML = [    '<section class="ww-hero">',      '<div class="ww-slug">',        '<span>WINTERWORD</span>',        '<span> • </span>',        '<span>2026</span>',      '</div>',      '<h1 class="ww-title">' + WW.escapeHtml(pageTitle || "Unavailable") + '</h1>',      '<div class="ww-status-stack">',        '<div class="ww-status-line">',          '<span class="ww-status-dot"></span>',          '<span>Unavailable</span>',        '</div>',      '</div>',    '</section>'  ].join("");};WW.fetchOrgState = async function(org){
+};WW.pruneOverlayControllers = function(){  var store = WW.state.overlayControllers || {};  Object.keys(store).forEach(function(key){    var controller = store[key];    if (!controller || typeof controller.isAlive !== "function" || !controller.isAlive()){      delete store[key];    }  });};WW.registerOverlayController = function(key, controller){  if (!key || !controller) return;  WW.pruneOverlayControllers();  WW.state.overlayControllers[key] = controller;};WW.unregisterOverlayController = function(key){  if (!key || !WW.state.overlayControllers) return;  delete WW.state.overlayControllers[key];};WW.getFallbackMountCleanupRecord = function(mount, create){  var records = WW.state.mountCleanupFallback || [];  for (var i = 0; i < records.length; i += 1){    if (records[i] && records[i].mount === mount){      return records[i];    }  }  if (!create) return null;  var record = { mount: mount, cleanup: [] };  records.push(record);  WW.state.mountCleanupFallback = records;  return record;};WW.ensureMountCleanupStore = function(mount){  if (!mount) return [];  if (WW.state.mountCleanup){    var store = WW.state.mountCleanup.get(mount);    if (!store){      store = [];      WW.state.mountCleanup.set(mount, store);    }    return store;  }  return WW.getFallbackMountCleanupRecord(mount, true).cleanup;};WW.registerMountCleanup = function(mount, fn){  if (!mount || typeof fn !== "function") return;  WW.ensureMountCleanupStore(mount).push(fn);};WW.runMountCleanup = function(mount){  if (!mount) return;  if (WW && WW.state && WW.state.overlayControllers){    Object.keys(WW.state.overlayControllers).forEach(function(key){      var controller = WW.state.overlayControllers[key];      if (!controller) return;      var root = controller.scopeRoot || null;      if (root && root === mount && typeof controller.destroy === "function"){        try{ controller.destroy(); }catch(e){}      }    });  }  var cleanupFns = null;  if (WW.state.mountCleanup){    cleanupFns = WW.state.mountCleanup.get(mount);  } else {    var record = WW.getFallbackMountCleanupRecord(mount, false);    cleanupFns = record ? record.cleanup : null;  }  if (!cleanupFns) return;  while (cleanupFns.length){    var fn = cleanupFns.pop();    try{ fn(); }catch(e){}  }  if (WW.state.mountCleanup){    WW.state.mountCleanup.delete(mount);  } else {    WW.state.mountCleanupFallback = (WW.state.mountCleanupFallback || []).filter(function(record){      return !!record && record.mount !== mount;    });  }};WW.escapeHtml = function(value){  return String(value == null ? "" : value)    .replace(/&/g, "&amp;")    .replace(/</g, "&lt;")    .replace(/>/g, "&gt;")    .replace(/"/g, "&quot;");};WW.getOrgFromUrl = function(scope){  try{    if (typeof window !== "undefined" && window.__WINTERWORD_BOOT__ && window.__WINTERWORD_BOOT__.slug){      return String(window.__WINTERWORD_BOOT__.slug).trim();    }  }catch(e){}  return "";};WW.prefixInternalPath = function(path){  if (!path) return path;  var value = String(path).trim();  if (!value) return value;  if (    value.indexOf("/cgi/") === 0 ||    value.indexOf("mailto:") === 0 ||    value.indexOf("tel:") === 0 ||    value.indexOf("#") === 0 ||    value.indexOf("http://") === 0 ||    value.indexOf("https://") === 0 ||    value.indexOf(WW.config.pathPrefix + "/") === 0 ||    value === WW.config.pathPrefix  ){    return value;  }  if (value.charAt(0) !== "/"){    return value;  }  return WW.config.pathPrefix + value;};WW.withOrg = function(path, org){  var href = WW.prefixInternalPath(path);  if (!href) return href;  if (href.indexOf("mailto:") === 0 || href.indexOf("tel:") === 0 || href.indexOf("#") === 0) return href;  return href;};WW.prefixInternalPathsInNode = function(root){  if (!root) return;  var attrNames = ["href","data-path","action"];  var nodes = root.querySelectorAll("[href],[data-path],[action]");  Array.prototype.forEach.call(nodes, function(node){    attrNames.forEach(function(attr){      var val = node.getAttribute(attr);      if (!val) return;      node.setAttribute(attr, WW.prefixInternalPath(val));    });  });};WW.stopRendering = function(node){  if (node) node.style.display = "none";};WW.showUnavailableBlock = function(viewEl, pageTitle){  if (!viewEl) return;  viewEl.innerHTML = [    '<section class="ww-hero">',      '<div class="ww-slug">',        '<span>WINTERWORD</span>',        '<span> • </span>',        '<span>2026</span>',      '</div>',      '<h1 class="ww-title">' + WW.escapeHtml(pageTitle || "Unavailable") + '</h1>',      '<div class="ww-status-stack">',        '<div class="ww-status-line">',          '<span class="ww-status-dot"></span>',          '<span>Unavailable</span>',        '</div>',      '</div>',    '</section>'  ].join("");};WW.fetchOrgState = async function(org){
   var key = String(org || "").trim();
   if (!key) return null;
 
@@ -290,7 +270,7 @@ WW.pruneRailInstances = function(){
     delete WW.state.leaderboardCache[key];
   }
   return settled;
-};WW.enforceTechDiffOrContinue = async function(org, scope){  if (!org) return { ok: true, skipped: true };  var result = await WW.fetchOrgState(org);  if (!result || !result.ok || !result.data) return { ok: false, result: result };  if (String(result.data.status || "").trim().toLowerCase() === "tech_diff"){    var target = WW.withOrg("/technical", org);    if (!WW.isCurrentLocation(scope, target)){      WW.navigate(scope, target);      return { ok: false, redirected: true, result: result };    }    return { ok: false, onTechnical: true, result: result };  }  return { ok: true, result: result };};WW.playSharedAudio = function(src, bucketKey){
+};WW.enforceTechDiffOrContinue = async function(org, scope){  if (!org) return { ok: true, skipped: true };  var result = await WW.fetchOrgState(org);  if (!result || !result.ok || !result.data) return { ok: false, result: result };  if (String(result.data.status || "").trim().toLowerCase() === "tech_diff"){    WW.navigate(scope, "/technical");    return { ok: false, redirected: true, result: result };  }  return { ok: true, result: result };};WW.playSharedAudio = function(src, bucketKey){
   if (!src) return null;
 
   function safePlay(audio){
@@ -836,28 +816,6 @@ WW.pages = WW.pages || {};/* SECTION: ANSWER-01 */WW.pages.renderAnswer01 = func
   }
 };
 
-WW.resolvePageName = function(pathname){
-  var cleanPath = String(pathname || "/");
-  var prefix = WW.config.pathPrefix || "";
-  if (prefix && cleanPath.indexOf(prefix) === 0){
-    cleanPath = cleanPath.slice(prefix.length) || "/";
-  }
-  if (!cleanPath || cleanPath === "/") return "renderWelcome";
-  var routes = {
-    "/welcome": "renderWelcome",
-    "/base-station": "renderBaseStation",
-    "/base-resolve": "renderBaseResolve",
-    "/clue-list": "renderClueList",
-    "/lifeline": "renderLifeline",
-    "/leaderboard": "renderLeaderboard"
-  };
-  if (routes[cleanPath]) return routes[cleanPath];
-  var clueMatch = cleanPath.match(/^\/clues\/(\d{2})$/);
-  if (clueMatch) return "renderClue" + clueMatch[1];
-  var answerMatch = cleanPath.match(/^\/answers\/(\d{2})$/);
-  if (answerMatch) return "renderAnswer" + answerMatch[1];
-  return null;
-};
 WW.init = function(root){
   var host = root && root.nodeType === 1 ? root : (typeof document !== "undefined" ? document.body : null);
   if (!host) return null;
@@ -869,15 +827,10 @@ WW.init = function(root){
   }
   WW.state.root = host;
   var doc = WW.resolveDoc(host);
-  var view = WW.resolveWin(host);
-  var location = WW.getLocation(host);
-  if (!doc || !view || !location){
+  if (!doc){
     return null;
   }
-  var pageName = WW.resolvePageName(location.pathname);
-  if (!pageName){
-    return null;
-  }
+  var pageName = "renderWelcome";
   var mount = host.querySelector("[data-ww-app-root]");
   if (!mount){
     mount = doc.createElement("div");
@@ -885,6 +838,23 @@ WW.init = function(root){
     host.appendChild(mount);
   }
   WW.bindOverlayEscape(mount);
+
+  var handleInternalLinkClick = function(event){
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    var target = event.target;
+    if (!target || typeof target.closest !== "function") return;
+    var anchor = target.closest("a[href]");
+    if (!anchor || !mount.contains(anchor)) return;
+    if (anchor.hasAttribute("download") || (anchor.getAttribute("target") || "") === "_blank") return;
+    var rawHref = anchor.getAttribute("href") || "";
+    if (!rawHref || rawHref.indexOf("#") === 0 || /^(mailto:|tel:|javascript:|https?:)/i.test(rawHref)) return;
+    var page = WW.routeToPageName(rawHref);
+    if (!page) return;
+    event.preventDefault();
+    WW.navigate(host, rawHref);
+  };
+  WW.registerScopedListener(mount, doc, "click", handleInternalLinkClick);
 
   var observer = null;
   if (typeof MutationObserver === "function"){
@@ -927,6 +897,8 @@ WW.init = function(root){
     }
   };
   WW.state.appInstance = instance;
+  WW.state.currentPageName = pageName;
+  WW.state.currentPagePath = "/";
   WW.mountPage(pageName, mount);
   return instance;
 };
@@ -943,57 +915,4 @@ WW.init = function(root){
   } else {
     start();
   }
-})();
-})();
-
-WW.interceptInternalLinks = function(mount){
-  if (!mount) return;
-  function handleClick(event){
-    var node = event.target;
-    while (node && node !== mount && !(node.tagName && String(node.tagName).toLowerCase() === "a")){
-      node = node.parentNode;
-    }
-    if (!node || node === mount) return;
-    var href = node.getAttribute("href");
-    if (!href) return;
-    if (/^(mailto:|tel:|#|javascript:|https?:)/i.test(href)) return;
-    event.preventDefault();
-    WW.navigate(mount, href);
-  }
-  WW.registerScopedListener(mount, mount, "click", handleClick);
-};
-
-WW.mountPage = function(pageName, mount){
-  if (!mount || !WW.pages) return;
-  WW.runMountCleanup(mount);
-  WW.state.currentPageName = pageName;
-  var renderer = null;
-  if (pageName === "welcome") renderer = WW.pages.renderWelcome;
-  else if (pageName === "base-station") renderer = WW.pages.renderBaseStation;
-  else if (pageName === "base-resolve") renderer = WW.pages.renderBaseResolve;
-  else if (pageName === "clue-list") renderer = WW.pages.renderClueList;
-  else if (pageName === "lifeline") renderer = WW.pages.renderLifeline;
-  else if (pageName === "leaderboard") renderer = WW.pages.renderLeaderboard;
-  else if (pageName === "answer-list") renderer = WW.pages.renderAnswerList;
-  else if (/^clues\/\d+$/i.test(pageName)){
-    var key = "render" + pageName.replace(/(^|\/)([a-z0-9])/gi, function(m, sep, chr){ return sep ? "" + chr.toUpperCase() : chr.toUpperCase(); }).replace(/\//g, "");
-    renderer = WW.pages[key];
-  } else if (/^answers\/\d+$/i.test(pageName)){
-    var key2 = "render" + pageName.replace(/(^|\/)([a-z0-9])/gi, function(m, sep, chr){ return sep ? "" + chr.toUpperCase() : chr.toUpperCase(); }).replace(/\//g, "");
-    renderer = WW.pages[key2];
-  }
-  if (typeof renderer === "function") renderer(mount);
-};
-WW.init = function(){
-  var mount = document.getElementById("app") || document.getElementById("winterword-root") || document.body;
-  WW.state.appInstance = { mount: mount };
-  WW.interceptInternalLinks(mount);
-  var initial = WW.resolvePageName("/base-station") || "base-station";
-  WW.mountPage(initial, mount);
-};
-if (document.readyState === "loading"){
-  document.addEventListener("DOMContentLoaded", WW.init, { once:true });
-}else{
-  WW.init();
-}
 })();
