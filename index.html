@@ -8,39 +8,47 @@
   <div id="app">Loading WinterWord…</div>
 
   <script>
-    (async function () {
-      const slug = location.pathname.replace(/^\/+|\/+$/g, "");
+<script>
+(async () => {
+  try {
+    const path = window.location.pathname;
+    const slug = path.replace("/", "").toLowerCase();
 
-      if (!slug) {
-        document.getElementById("app").innerText = "";
-        return;
-      }
+    if (!slug) {
+      document.body.innerHTML = "Missing slug.";
+      return;
+    }
 
-      try {
-        const res = await fetch("https://engine.cluehouse.co.nz/api/bootstrap", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug })
-        });
+    const res = await fetch("/api/bootstrap", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ slug })
+    });
 
-        if (!res.ok) {
-          document.getElementById("app").innerText = "Invalid organisation.";
-          return;
-        }
+    const data = await res.json();
 
-        const boot = await res.json();
+    if (!data.ok) {
+      document.body.innerHTML = "Invalid game.";
+      return;
+    }
 
-        window.__BOOT__ = boot;
+    const script = document.createElement("script");
+    script.src = data.entry;
+    script.onload = () => console.log("Engine loaded");
+    script.onerror = () => {
+      document.body.innerHTML = "Error loading game.";
+    };
 
-        const script = document.createElement("script");
-        script.src = boot.entry;
-        script.type = "module";
-        document.head.appendChild(script);
+    document.body.innerHTML = "";
+    document.body.appendChild(script);
 
-      } catch (e) {
-        document.getElementById("app").innerText = "Error loading game.";
-      }
-    })();
+  } catch (err) {
+    document.body.innerHTML = "Error loading game.";
+  }
+})();
+</script>
   </script>
 </body>
 </html>
