@@ -35,7 +35,7 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({
       ok: true,
       slug: cleanSlug,
-      entry: "/public/js/winterword-engine-singleurl.js"
+entry: "/public/js/winterword-engine-v1.js"
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
