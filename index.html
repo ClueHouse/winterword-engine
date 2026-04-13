@@ -8,47 +8,43 @@
   <div id="app">Loading WinterWord…</div>
 
   <script>
-<script>
-(async () => {
-  try {
-    const path = window.location.pathname;
-    const slug = path.replace("/", "").toLowerCase();
+    (async () => {
+      try {
+        const path = window.location.pathname;
+        const slug = path.replace(/^\/+|\/+$/g, "").toLowerCase();
 
-    if (!slug) {
-      document.body.innerHTML = "Missing slug.";
-      return;
-    }
+        if (!slug) {
+          document.getElementById("app").innerText = "Missing slug.";
+          return;
+        }
 
-    const res = await fetch("/api/bootstrap", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ slug })
-    });
+        const res = await fetch("/api/bootstrap", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ slug })
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    if (!data.ok) {
-      document.body.innerHTML = "Invalid game.";
-      return;
-    }
+        if (!data.ok) {
+          document.getElementById("app").innerText = "Invalid game.";
+          return;
+        }
 
-    const script = document.createElement("script");
-    script.src = data.entry;
-    script.onload = () => console.log("Engine loaded");
-    script.onerror = () => {
-      document.body.innerHTML = "Error loading game.";
-    };
+        const script = document.createElement("script");
+        script.src = data.entry;
+        script.onload = () => console.log("Engine loaded");
+        script.onerror = () => {
+          document.getElementById("app").innerText = "Error loading game.";
+        };
 
-    document.body.innerHTML = "";
-    document.body.appendChild(script);
-
-  } catch (err) {
-    document.body.innerHTML = "Error loading game.";
-  }
-})();
-</script>
+        document.body.appendChild(script);
+      } catch (err) {
+        document.getElementById("app").innerText = "Error loading game.";
+      }
+    })();
   </script>
 </body>
 </html>
